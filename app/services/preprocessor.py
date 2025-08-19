@@ -25,11 +25,11 @@ def map_product_group(product_description: str) -> str:
 
 def compute_brass_index(copper_price: float, zinc_price: float) -> float:
     try:
-        model_path = Path(__file__).parent.parent / "models" / "brass_index_model.joblib"
+        model_path = Path(__file__).parent.parent.parent / "models" / "brass_index_model.joblib"
         model = joblib.load(model_path)
         input_data = pd.DataFrame({
-            "spot_price_copper": [copper_price],
-            "spot_price_zinc": [zinc_price]
+            "spot price(rs.)_copper": [copper_price],
+            "spot price(rs.)_zinc": [zinc_price]
         })
         brass_index = model.predict(input_data)[0]
         logger.info(f"Computed brass index: {brass_index} for copper={copper_price}, zinc={zinc_price}")
@@ -77,11 +77,16 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
             window_timedelta = timedelta(days=window)
             window_df = auction_df[auction_df["auction_date"] >= parsed_date - window_timedelta]
 
-            features[f"auction_frequency_{window}d"] = len(window_df)
+            if window == 7:
+                features[f"auction_frequency_{window}d"] = len(window_df)
 
             features[f"price_momentum_{window}d"] = (
                 (window_df["proposed_rp"].iloc[-1] - window_df["proposed_rp"].iloc[0]) / window_df["proposed_rp"].iloc[0] * 100
-                if not window_df.empty else 0
+                if not window_df.empty and len(window_df) > 1 else 0
+            )
+            features[f"quantity_trend_{window}d"] = (
+                (window_df["quantity"].iloc[-1] - window_df["quantity"].iloc[0]) / window_df["quantity"].iloc[0] * 100
+                if not window_df.empty and len(window_df) > 1 else 0
             )
             features[f"price_volatility_{window}d"] = window_df["proposed_rp"].std() if not window_df.empty else 0
             features[f"rolling_mean_{window}d_proposed_rp"] = window_df["proposed_rp"].rolling(window).mean().iloc[-1] if not window_df.empty else 0
@@ -107,9 +112,10 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
             if not one_day_df.empty and len(one_day_df) > 1 else 0
         )
 
-        if product_group == "valve":
-            copper_price = market_data["copper"]["spot_price_copper"].iloc[-1] if not market_data["copper"].empty else settings.COPPER_PRICE_DEFAULT
-            zinc_price = market_data["zinc"]["spot_price_zinc"].iloc[-1] if not market_data["zinc"].empty else settings.ZINC_PRICE_DEFAULT
+        if product_group.lower().rstrip("s") == "valve":
+
+            copper_price = market_data["copper"]["spot price(rs.)_copper"].iloc[-1] if not market_data["copper"].empty else settings.COPPER_PRICE_DEFAULT
+            zinc_price = market_data["zinc"]["spot price(rs.)_zinc"].iloc[-1] if not market_data["zinc"].empty else settings.ZINC_PRICE_DEFAULT
             brass_index = compute_brass_index(copper_price, zinc_price)
             features["brass_index_poly"] = brass_index
 
@@ -118,8 +124,8 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
                 date = parsed_date + timedelta(days=i)
                 temp_auction_df = auction_df[auction_df["auction_date"].dt.date == date.date()]
                 if not temp_auction_df.empty:
-                    temp_copper = market_data["copper"][market_data["copper"]["date"].dt.date == date.date()]["spot_price_copper"]
-                    temp_zinc = market_data["zinc"][market_data["zinc"]["date"].dt.date == date.date()]["spot_price_zinc"]
+                    temp_copper = market_data["copper"][market_data["copper"]["date"].dt.date == date.date()]["spot price(rs.)_copper"]
+                    temp_zinc = market_data["zinc"][market_data["zinc"]["date"].dt.date == date.date()]["spot price(rs.)_zinc"]
                     temp_copper = temp_copper.iloc[-1] if not temp_copper.empty else settings.COPPER_PRICE_DEFAULT
                     temp_zinc = temp_zinc.iloc[-1] if not temp_zinc.empty else settings.ZINC_PRICE_DEFAULT
                     brass_indices.append(compute_brass_index(temp_copper, temp_zinc))
@@ -141,5 +147,3 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
     except Exception as e:
         logger.error(f"Error preprocessing data: {str(e)}")
         raise
-
-    

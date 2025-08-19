@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from pathlib import Path
 from app.config import settings
-from app.utils.logger import logger 
+from app.utils.logger import logger
 
 def load_historical_data(input_date: str) -> pd.DataFrame:
     """
@@ -28,24 +28,25 @@ def load_historical_data(input_date: str) -> pd.DataFrame:
         df.columns = df.columns.str.lower().str.strip()
         logger.info(f"Normalized column names: {list(df.columns)}")
 
-        cutoff_date = parsed_date - timedelta(days = 365 * settings.HISTORICAL_DATA_LMT)
+        cutoff_date = parsed_date - timedelta(days=365 * settings.HISTORICAL_DATA_LMT)
         if "auction_date" not in df.columns:
             logger.error("Missing 'auction_date' column in data")
             raise ValueError("Missing 'auction_date' column in data")
+
         df["auction_date"] = pd.to_datetime(df["auction_date"])
         df = df[df["auction_date"] >= cutoff_date]
-        logger.info(f'Filtered to {len(df)} rows within {settings.HISTORICAL_DATA_LMT} years')
+        logger.info(f"Filtered to {len(df)} rows within {settings.HISTORICAL_DATA_LMT} years")
 
         return df
     except Exception as e:
         logger.error(f"Error loading historical data: {str(e)}")
-        raise 
+        raise
 
-def load_market_data() -> pd.DataFrame:
+def load_market_data() -> dict:
     """
     Load market data (copper/zinc prices) for brass index calculation.
     Returns:
-        pd.DataFrame: Market data (demo or placeholder).
+        dict: Market data with original column names preserved.
     """
     try:
         if settings.DATA_SOURCE == "demo":
@@ -54,18 +55,24 @@ def load_market_data() -> pd.DataFrame:
             df_copper = pd.read_excel(copper_path)
             df_zinc = pd.read_excel(zinc_path)
 
-            logger.info(f"Loaded copper data from {len(df_copper)} rows, zinc data: {len(df_zinc)}")
+            logger.info(f"Loaded copper data: {len(df_copper)} rows, zinc data: {len(df_zinc)} rows")
 
+            # Normalize column names only (no renaming)
             df_copper.columns = df_copper.columns.str.lower().str.strip()
             df_zinc.columns = df_zinc.columns.str.lower().str.strip()
+            df_copper.rename(columns={"spot price(rs.)": "spot price(rs.)_copper"}, inplace=True)
+            df_zinc.rename(columns={"spot price(rs.)": "spot price(rs.)_zinc"}, inplace=True)
 
-            return {"copper" : df_copper, "zinc":df_zinc}
+            logger.debug(f"Copper columns: {df_copper.columns.tolist()}")
+            logger.debug(f"Zinc columns: {df_zinc.columns.tolist()}")
+
+            return {"copper": df_copper, "zinc": df_zinc}
         else:
             logger.warning("Market API not implemented; using hardcoded prices")
-        return {
-            "copper": pd.DataFrame({"spot_price_copper": [settings.COPPER_PRICE_DEFAULT]}),
-            "zinc": pd.DataFrame({"spot_price_zinc": [settings.ZINC_PRICE_DEFAULT]})
-        }
+            return {
+                "copper": pd.DataFrame({"spot price(rs.)_copper": [settings.COPPER_PRICE_DEFAULT]}),
+                "zinc": pd.DataFrame({"spot price(rs.)_zinc": [settings.ZINC_PRICE_DEFAULT]})
+            }
     except Exception as e:
         logger.error(f"Error loading market data: {str(e)}")
         raise

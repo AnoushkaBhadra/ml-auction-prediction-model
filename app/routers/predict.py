@@ -10,9 +10,10 @@ from app.utils.logger import logger
 router = APIRouter(prefix="/predict", tags=["predictions"])
 
 class PredictionInput(BaseModel):
-    product_group: str = Field(..., description="Product group: 'cylinder', 'valve', or 'brass'")
+    product_group: str = Field(..., description="Product group: 'cylinder' or 'valve'")
     quantity: float = Field(..., gt=0, description="Quantity in MT")
     date: str = Field(..., description="Date in YYYY-MM-DD format")
+    location: str = Field(..., description="Auction location or state name (not used in model)")
 
     @field_validator("product_group")
     def validate_product_group(cls, v):
@@ -21,9 +22,7 @@ class PredictionInput(BaseModel):
             return "cylinder"
         elif any(word in v_lower for word in ["valve", "valves"]):
             return "valve"
-        elif "brass" in v_lower:
-            return "brass"
-        raise ValueError("product_group must be 'cylinder', 'valve', or 'brass' (singular/plural variations accepted)")
+        raise ValueError("product_group must be 'cylinder' or 'valve' (singular/plural variations accepted)")
 
     @field_validator("date")
     def validate_date(cls, v):
@@ -38,12 +37,14 @@ class PredictionOutput(BaseModel):
     product_group: str
     quantity: float
     date: str
-    predictions: Dict[str, Dict[str, float]]  # Nested dict for proposed_rp and last_bid_price or just proposed_rp for brass
+    location: str  # Echoed back for presentation
+    predictions: Dict[str, Dict[str, float]]
 
 @router.post("/", response_model=PredictionOutput)
 async def predict(input_data: PredictionInput):
     """
     Predict auction price quantiles (Q5, Q50, Q90) and confidence interval for proposed_rp and last_bid_price.
+    Location is accepted but not used in model inference.
     """
     try:
         logger.info(f"Received prediction request: {input_data.dict()}")
@@ -52,7 +53,7 @@ async def predict(input_data: PredictionInput):
         auction_df = load_historical_data(input_data.date)
         market_data = load_market_data()
 
-        # Preprocess data
+        # Preprocess data (location is ignored)
         feature_df = preprocess_data(
             product_group=input_data.product_group,
             quantity=input_data.quantity,
@@ -61,13 +62,16 @@ async def predict(input_data: PredictionInput):
             market_data=market_data
         )
 
-        # Run inference
+        # Run inference (location is ignored)
         result = run_inference(
             product_group=input_data.product_group,
             quantity=input_data.quantity,
             input_date=input_data.date,
             feature_df=feature_df
         )
+
+        # Add location back into response for optics
+        result["location"] = input_data.location
 
         logger.info(f"Prediction successful: {result}")
         return result

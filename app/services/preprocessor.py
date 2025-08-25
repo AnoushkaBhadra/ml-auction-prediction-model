@@ -38,6 +38,7 @@ def map_product_group(product_description: str) -> str:
         return "cylinder"
     elif any(keyword in product for keyword in ["valve", "valves", "brass valve", "bronze valve"]):
         return "valve"
+    return None
 
     # Fallback for unknown product descriptions
     logger.warning(f"Unknown product description: {product_description}. Defaulting to 'cylinder'.")
@@ -267,8 +268,8 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
         if product_group == "valve":
             copper_df = market_data["copper"]
             zinc_df = market_data["zinc"]
-            latest_copper = copper_df[copper_df["date"] <= parsed_date]["spot_price_copper"].iloc[-1] if not copper_df[copper_df["date"] <= parsed_date].empty else settings.FALLBACK_COPPER_PRICE
-            latest_zinc = zinc_df[zinc_df["date"] <= parsed_date]["spot_price_zinc"].iloc[-1] if not zinc_df[zinc_df["date"] <= parsed_date].empty else settings.FALLBACK_ZINC_PRICE
+            latest_copper = copper_df[copper_df["date"] <= parsed_date]["spot price(rs.)_copper"].iloc[-1] if not copper_df[copper_df["date"] <= parsed_date].empty else settings.FALLBACK_COPPER_PRICE
+            latest_zinc = zinc_df[zinc_df["date"] <= parsed_date]["spot price(rs.)_zinc"].iloc[-1] if not zinc_df[zinc_df["date"] <= parsed_date].empty else settings.FALLBACK_ZINC_PRICE
             features["brass_index"] = 0.6 * latest_copper + 0.4 * latest_zinc  # Example weights
 
             # Brass index momentum and volatility
@@ -281,7 +282,7 @@ def preprocess_data(product_group: str, quantity: float, input_date: str, auctio
                     features[f"brass_index_momentum_{window_days}d"] = 0
                     features[f"brass_index_volatility_{window_days}d"] = 0
                 else:
-                    window_brass = 0.6 * window_copper["spot_price_copper"] + 0.4 * window_zinc["spot_price_zinc"]
+                    window_brass = 0.6 * window_copper["spot price(rs.)_copper"] + 0.4 * window_zinc["spot price(rs.)_zinc"]
                     features[f"brass_index_momentum_{window_days}d"] = window_brass.pct_change().mean() or 0
                     features[f"brass_index_volatility_{window_days}d"] = window_brass.std() or 0
 

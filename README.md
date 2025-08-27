@@ -41,7 +41,6 @@ Trained models are saved in the models directory
 ### Usage
 1. Model Training
 See Training_Model.ipynb for full training pipeline.
-Models are saved as cyl_proposed_rp_qXX_seedY.joblib, valve_lbp_qXX_seedY.joblib, etc.
 2. Prediction API
   Main entrypoint: main.py
   Prediction logic: model_inference.py

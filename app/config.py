@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     DB_URL: str = ""
     MARKET_API_URL: str = ""
 
-    # ✅ Add these to avoid ValidationError
     metalprice_api_key: str
     usd_to_inr: str
 

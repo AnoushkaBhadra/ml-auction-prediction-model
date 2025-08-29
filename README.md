@@ -1,5 +1,13 @@
 # Auction Price Prediction System
-This project predicts auction prices for LPG cylinders and valves using machine learning models trained on historical auction and market data. It includes data preprocessing, feature engineering, model training, inference APIs, and reporting utilities.
+
+This project predicts auction prices for LPG cylinders and valves using machine learning models trained on historical auction and market data. It includes:
+
+- Data preprocessing and feature engineering  
+- Model training and quantile-based inference  
+- FastAPI endpoints for real-time prediction  
+- Reporting utilities and simulation notebooks  
+
+## Project Structure
 
 ### Project Structure
 ```
@@ -23,9 +31,20 @@ This project predicts auction prices for LPG cylinders and valves using machine 
 ```
 
 ### Setup:
-1. Clone Repository
-2. Install Dependencies
-   ``` pip install -r requirements```
+Clone Repository:
+``` git clone https://github.com/AnoushkaBhadra/ml-auction-prediction-model.git```
+
+### Create a virtual environment
+
+```
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+###
+Install Dependecies:
+``` pip install -r requirements.txt```
+
 
 ### Prepare data
 Place auction and market data in the data directory.

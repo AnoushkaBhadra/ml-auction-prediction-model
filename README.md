@@ -46,6 +46,11 @@ Install Dependecies:
 ``` pip install -r requirements.txt```
 
 
+### Environment Variables
+
+```copy .env.example .env``` 
+
+
 ### Prepare data
 Place auction and market data in the data directory.
 Run EDA and feature engineering notebooks as needed.
